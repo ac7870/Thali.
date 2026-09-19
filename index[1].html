@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thali — food and macro log</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,700;12..96,800&family=Newsreader:ital,opsz,wght@0,6..72,400;1,6..72,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#ECEFEA; --panel:#FFFFFF; --panel2:#F5F7F3;
+  --ink:#12211C; --muted:#5B6B63; --line:#D3DAD3; --line2:#E4E9E3;
+  --pro:#2E6F6B; --carb:#B8841A; --fat:#B4503C; --fib:#5E8B3A;
+  --warn:#8A3B2E; --ok:#2E6F4B;
+  --r:14px; --sp:clamp(14px,2.4vw,22px);
+  --ui:"Bricolage Grotesque",ui-sans-serif,system-ui,"Segoe UI",sans-serif;
+  --prose:"Newsreader",Georgia,"Times New Roman",serif;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#0F1513; --panel:#171F1C; --panel2:#1C2522;
+    --ink:#E9EFEA; --muted:#94A69C; --line:#27332E; --line2:#202B27;
+    --pro:#6FC3BB; --carb:#E3B155; --fat:#E08268; --fib:#9AC66C;
+    --warn:#E08268; --ok:#7FC49A;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0F1513; --panel:#171F1C; --panel2:#1C2522;
+  --ink:#E9EFEA; --muted:#94A69C; --line:#27332E; --line2:#202B27;
+  --pro:#6FC3BB; --carb:#E3B155; --fat:#E08268; --fib:#9AC66C;
+  --warn:#E08268; --ok:#7FC49A;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:var(--paper); color:var(--ink);
+  font-family:var(--ui); font-variant-numeric:tabular-nums;
+  -webkit-text-size-adjust:100%;
+  padding:0 var(--sp) 64px;
+}
+.wrap{max-width:1080px;margin:0 auto}
+a{color:inherit}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2.5px solid var(--pro);outline-offset:2px;border-radius:6px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ---------- masthead ---------- */
+header.top{
+  display:flex;align-items:flex-end;justify-content:space-between;gap:16px;
+  flex-wrap:wrap;padding:26px 0 18px;border-bottom:1.5px solid var(--ink);
+}
+.brand{display:flex;align-items:baseline;gap:12px}
+.brand h1{
+  font-size:clamp(30px,6vw,46px);font-weight:800;letter-spacing:-.035em;
+  margin:0;line-height:.9;
+}
+.brand p{margin:0;font-family:var(--prose);font-size:15px;color:var(--muted);max-width:30ch}
+.datebar{display:flex;align-items:center;gap:6px}
+.datebar button{
+  background:transparent;border:1.5px solid var(--line);border-radius:10px;
+  width:34px;height:34px;font-size:17px;line-height:1;color:var(--muted);
+}
+.datebar button:hover{border-color:var(--ink);color:var(--ink)}
+#dayLabel{font-weight:700;font-size:15px;min-width:130px;text-align:center}
+
+/* ---------- hero totals ---------- */
+.hero{padding:22px 0 26px;border-bottom:1px solid var(--line)}
+.kcalrow{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.kcalbig{font-size:clamp(50px,13vw,92px);font-weight:800;letter-spacing:-.05em;line-height:.85}
+.kcalof{font-size:16px;color:var(--muted);font-weight:500}
+.kcalof b{color:var(--ink);font-weight:700}
+.plateline{
+  display:flex;height:16px;margin:20px 0 8px;border-radius:999px;overflow:hidden;
+  background:var(--line2);
+}
+.plateline span{display:block;height:100%;transition:width .35s ease}
+.legend{display:flex;gap:18px;flex-wrap:wrap;font-size:12.5px;color:var(--muted)}
+.legend i{width:9px;height:9px;border-radius:2px;display:inline-block;margin-right:6px}
+.macros{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:22px}
+@media(max-width:620px){.macros{grid-template-columns:repeat(2,1fr)}}
+.macro{background:var(--panel);border:1px solid var(--line2);border-radius:var(--r);padding:13px 14px}
+.macro .t{font-size:12.5px;color:var(--muted);font-weight:600}
+.macro .v{font-size:25px;font-weight:700;letter-spacing:-.03em;margin-top:2px}
+.macro .v small{font-size:13px;font-weight:500;color:var(--muted);letter-spacing:0}
+.bar{height:5px;background:var(--line2);border-radius:999px;margin-top:9px;overflow:hidden}
+.bar b{display:block;height:100%;border-radius:999px;transition:width .35s ease}
+
+/* ---------- layout ---------- */
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:var(--sp);padding-top:var(--sp)}
+@media(max-width:860px){.cols{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line2);border-radius:var(--r);padding:18px;margin-bottom:var(--sp)}
+.card h2{font-size:17px;font-weight:700;letter-spacing:-.02em;margin:0 0 4px}
+.card .sub{font-family:var(--prose);font-size:14.5px;color:var(--muted);margin:0 0 14px;line-height:1.5}
+
+/* ---------- search ---------- */
+.searchwrap{position:relative}
+input[type=search],input[type=text],input[type=number],select{
+  width:100%;background:var(--panel2);border:1.5px solid var(--line);
+  border-radius:11px;padding:11px 13px;
+}
+input[type=search]{font-size:16px}
+.results{list-style:none;margin:12px 0 0;padding:0;max-height:330px;overflow:auto}
+.results li{
+  display:flex;align-items:center;gap:12px;padding:10px 6px;
+  border-bottom:1px solid var(--line2);cursor:pointer;
+}
+.results li:hover,.results li[aria-selected=true]{background:var(--panel2)}
+.results .nm{flex:1;min-width:0}
+.results .nm b{display:block;font-weight:600;font-size:15px}
+.results .nm span{font-size:12.5px;color:var(--muted)}
+.results .kc{font-weight:700;font-size:15px;white-space:nowrap}
+.results .kc small{color:var(--muted);font-weight:500;font-size:11.5px}
+.empty{font-family:var(--prose);color:var(--muted);padding:14px 4px;font-size:15px}
+.chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}
+.chip{
+  background:transparent;border:1.4px solid var(--line);border-radius:999px;
+  padding:6px 12px;font-size:13px;font-weight:600;color:var(--muted);
+}
+.chip[aria-pressed=true]{border-color:var(--ink);color:var(--ink);background:var(--panel2)}
+
+.btnrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.btn{
+  border:1.5px solid var(--ink);background:var(--ink);color:var(--paper);
+  border-radius:11px;padding:10px 16px;font-weight:700;font-size:14.5px;
+}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+.btn.ghost:hover:not(:disabled){border-color:var(--ink)}
+.btn.sm{padding:7px 12px;font-size:13px;border-radius:9px}
+.status{font-size:13.5px;color:var(--muted);margin-top:10px;min-height:19px}
+.status.err{color:var(--warn)}
+
+/* ---------- log ---------- */
+.meal{margin-bottom:16px}
+.meal h3{
+  font-size:13px;font-weight:700;color:var(--muted);margin:0 0 6px;
+  display:flex;justify-content:space-between;
+}
+.entry{
+  display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line2);
+}
+.entry .en{flex:1;min-width:0}
+.entry .en b{font-weight:600;font-size:14.5px;display:block}
+.entry .en span{font-size:12px;color:var(--muted)}
+.entry .ek{font-weight:700;font-size:14.5px}
+.entry .x{
+  background:transparent;border:none;color:var(--muted);font-size:17px;
+  line-height:1;padding:4px 6px;border-radius:7px;
+}
+.entry .x:hover{color:var(--warn);background:var(--panel2)}
+
+/* ---------- week ---------- */
+.week{display:flex;align-items:flex-end;gap:8px;height:110px;margin-top:8px}
+.week div{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:6px;height:100%}
+.week i{display:block;width:100%;background:var(--pro);border-radius:5px 5px 2px 2px;min-height:3px}
+.week em{font-style:normal;font-size:11px;color:var(--muted)}
+
+/* ---------- goals ---------- */
+.goalgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:9px}
+@media(max-width:620px){.goalgrid{grid-template-columns:repeat(2,1fr)}}
+.goalgrid label{font-size:12px;color:var(--muted);font-weight:600;display:block;margin-bottom:4px}
+
+/* ---------- sheet ---------- */
+.scrim{
+  position:fixed;inset:0;background:rgba(10,20,16,.45);display:none;
+  align-items:center;justify-content:center;padding:18px;z-index:40;
+}
+.scrim[open]{display:flex}
+.sheet{
+  background:var(--panel);border-radius:16px;padding:20px;width:min(430px,100%);
+  border:1px solid var(--line);max-height:90vh;overflow:auto;
+}
+.sheet h3{margin:0 0 2px;font-size:19px;letter-spacing:-.02em}
+.sheet .why{font-family:var(--prose);color:var(--muted);font-size:14px;margin:0 0 16px}
+.qtyrow{display:grid;grid-template-columns:110px 1fr;gap:9px;margin-bottom:14px}
+.preview{display:flex;gap:16px;flex-wrap:wrap;margin:14px 0 18px;font-size:13px}
+.preview b{display:block;font-size:19px;font-weight:700}
+.preview i{font-style:normal;color:var(--muted);font-size:11.5px;font-weight:600}
+footer{padding:34px 0 0;border-top:1px solid var(--line);margin-top:var(--sp);
+  font-family:var(--prose);font-size:14px;color:var(--muted);line-height:1.6}
+.hide{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <div class="brand">
+    <h1>Thali</h1>
+    <p>Type what you ate, or photograph the plate.</p>
+  </div>
+  <div class="datebar">
+    <button id="prevDay" aria-label="Previous day">‹</button>
+    <div id="dayLabel">Today</div>
+    <button id="nextDay" aria-label="Next day">›</button>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="kcalrow">
+    <div class="kcalbig" id="kcalNow">0</div>
+    <div class="kcalof">kcal of <b id="kcalGoal">2000</b> · <span id="kcalLeft">2000 left</span></div>
+  </div>
+  <div class="plateline" id="plateline" role="img" aria-label="Share of calories from each macronutrient">
+    <span style="background:var(--pro);width:0"></span>
+    <span style="background:var(--carb);width:0"></span>
+    <span style="background:var(--fat);width:0"></span>
+  </div>
+  <div class="legend">
+    <span><i style="background:var(--pro)"></i>Protein</span>
+    <span><i style="background:var(--carb)"></i>Carbs</span>
+    <span><i style="background:var(--fat)"></i>Fat</span>
+    <span><i style="background:var(--fib)"></i>Fibre tracked separately</span>
+  </div>
+
+  <div class="macros">
+    <div class="macro"><div class="t">Protein</div><div class="v" id="vPro">0<small> g</small></div>
+      <div class="bar"><b id="bPro" style="background:var(--pro);width:0"></b></div></div>
+    <div class="macro"><div class="t">Carbs</div><div class="v" id="vCarb">0<small> g</small></div>
+      <div class="bar"><b id="bCarb" style="background:var(--carb);width:0"></b></div></div>
+    <div class="macro"><div class="t">Fat</div><div class="v" id="vFat">0<small> g</small></div>
+      <div class="bar"><b id="bFat" style="background:var(--fat);width:0"></b></div></div>
+    <div class="macro"><div class="t">Fibre</div><div class="v" id="vFib">0<small> g</small></div>
+      <div class="bar"><b id="bFib" style="background:var(--fib);width:0"></b></div></div>
+  </div>
+</section>
+
+<div class="cols">
+  <div>
+    <section class="card">
+      <h2>Find a food</h2>
+      <p class="sub">Search 130 everyday foods — South Indian staples, dals, meats, fruit, packaged snacks. Values are per 100 g unless a portion is named.</p>
+      <div class="searchwrap">
+        <input type="search" id="q" placeholder="idli, paneer, chicken breast, banana…" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="chips" id="catChips"></div>
+      <ul class="results" id="results"></ul>
+    </section>
+
+  </div>
+
+  <div>
+    <section class="card">
+      <h2>Today's log</h2>
+      <p class="sub" id="logSub">Nothing logged yet. Search a food above to start the day.</p>
+      <div id="log"></div>
+    </section>
+
+    <section class="card">
+      <h2>Last seven days</h2>
+      <p class="sub">Calories per day. The line marks your goal.</p>
+      <div class="week" id="week"></div>
+    </section>
+
+    <section class="card">
+      <h2>Daily targets</h2>
+      <p class="sub">Set these once. They drive every bar on the page.</p>
+      <div class="goalgrid">
+        <div><label for="gKcal">Calories</label><input type="number" id="gKcal" min="500" max="6000" step="10"></div>
+        <div><label for="gPro">Protein g</label><input type="number" id="gPro" min="10" max="400" step="1"></div>
+        <div><label for="gCarb">Carbs g</label><input type="number" id="gCarb" min="10" max="800" step="1"></div>
+        <div><label for="gFat">Fat g</label><input type="number" id="gFat" min="5" max="300" step="1"></div>
+        <div><label for="gFib">Fibre g</label><input type="number" id="gFib" min="5" max="100" step="1"></div>
+      </div>
+      <div class="btnrow"><button class="btn ghost sm" id="saveGoals">Save targets</button>
+        <button class="btn ghost sm" id="clearDay">Clear this day</button></div>
+      <div class="status" id="goalStatus"></div>
+    </section>
+  </div>
+</div>
+
+<footer>
+  Numbers come from a fixed reference table of cooked, ready-to-eat portions, so treat them as a good estimate rather than a lab result. Everything you log stays in this browser.
+</footer>
+</div>
+
+<div class="scrim" id="scrim" role="dialog" aria-modal="true" aria-labelledby="sheetName">
+  <div class="sheet">
+    <h3 id="sheetName">Food</h3>
+    <p class="why" id="sheetCat"></p>
+    <div class="qtyrow">
+      <input type="number" id="qty" min="0.25" step="0.25" value="1">
+      <select id="unit"></select>
+    </div>
+    <div class="chips" id="mealChips"></div>
+    <div class="preview">
+      <div><i>Calories</i><b id="pKcal">0</b></div>
+      <div><i>Protein</i><b id="pPro">0 g</b></div>
+      <div><i>Carbs</i><b id="pCarb">0 g</b></div>
+      <div><i>Fat</i><b id="pFat">0 g</b></div>
+      <div><i>Fibre</i><b id="pFib">0 g</b></div>
+    </div>
+    <div class="btnrow">
+      <button class="btn" id="addBtn">Add to log</button>
+      <button class="btn ghost" id="cancelBtn">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   1. FOOD DATABASE
+   [name, kcal, protein, carbs, fat, fibre]  — all per 100 g
+   plus a named household portion and its weight in grams.
+   ============================================================ */
+const F = (name,cat,kcal,p,c,f,fib,portion,pg)=>({name,cat,kcal,p,c,f,fib,portion,pg});
+const FOODS = [
+  // — South Indian —
+  F("Idli","South Indian",98,2.6,19.5,0.4,0.9,"1 idli",40),
+  F("Plain dosa","South Indian",168,3.9,28,4.4,1.2,"1 dosa",80),
+  F("Masala dosa","South Indian",187,4.0,30,5.9,2.0,"1 dosa",150),
+  F("Medu vada","South Indian",320,8,33,17,4,"1 vada",45),
+  F("Uttapam","South Indian",165,4.2,27,4.5,1.8,"1 uttapam",120),
+  F("Appam","South Indian",120,2.5,25,1.5,0.9,"1 appam",70),
+  F("Idiyappam","South Indian",160,3,34,1,1.4,"1 nest",60),
+  F("Puttu","South Indian",160,3,33,1,2,"1 cylinder",120),
+  F("Malabar parotta","South Indian",345,7,46,14,2,"1 parotta",80),
+  F("Upma","South Indian",152,3.6,22,5.5,1.6,"1 bowl",180),
+  F("Ven pongal","South Indian",180,4.5,25,6.5,2,"1 bowl",180),
+  F("Sambar","South Indian",85,3.5,10,3.2,2.5,"1 bowl",150),
+  F("Rasam","South Indian",35,1.2,5,1.2,1,"1 bowl",150),
+  F("Curd rice","South Indian",120,3,18,4,0.5,"1 bowl",200),
+  F("Lemon rice","South Indian",170,3,25,6,1.2,"1 cup",150),
+  F("Tomato rice","South Indian",165,3,25,6,1.3,"1 cup",150),
+  F("Coconut chutney","South Indian",195,3,6,18,3,"2 tbsp",30),
+  F("Tomato chutney","South Indian",80,1.5,8,5,1.5,"2 tbsp",30),
+  F("Filter coffee with milk","South Indian",60,1.7,8,2,0,"1 tumbler",120),
+  // — North Indian & breads —
+  F("Chapati / roti","Indian breads",297,11,46,7.5,4.9,"1 roti",40),
+  F("Plain paratha","Indian breads",330,7,42,15,3,"1 paratha",60),
+  F("Aloo paratha","Indian breads",290,6,38,13,3.4,"1 paratha",100),
+  F("Poori","Indian breads",380,7,45,19,2,"1 poori",30),
+  F("Naan","Indian breads",310,9,50,7,2.2,"1 naan",90),
+  F("Bhatura","Indian breads",350,7,44,16,1.8,"1 piece",70),
+  // — Dals, curries, mains —
+  F("Toor dal, cooked","Dals & curries",116,7,20,0.4,4,"1 katori",150),
+  F("Moong dal, cooked","Dals & curries",105,7,19,0.4,7.6,"1 katori",150),
+  F("Masoor dal, cooked","Dals & curries",116,9,20,0.4,7.9,"1 katori",150),
+  F("Rajma, cooked","Dals & curries",127,8.7,22.8,0.5,6.4,"1 katori",150),
+  F("Chana / chickpeas, cooked","Dals & curries",164,8.9,27,2.6,7.6,"1 katori",150),
+  F("Palak paneer","Dals & curries",150,7,6,11,2,"1 katori",150),
+  F("Paneer butter masala","Dals & curries",230,9,8,18,1.5,"1 katori",150),
+  F("Chicken curry","Dals & curries",180,15,5,11,1,"1 katori",150),
+  F("Butter chicken","Dals & curries",240,14,6,18,1,"1 katori",150),
+  F("Fish curry","Dals & curries",130,14,4,6,1,"1 katori",150),
+  F("Prawn masala","Dals & curries",130,16,4,5,1,"1 katori",150),
+  F("Egg curry","Dals & curries",150,8,5,11,1,"1 katori",150),
+  F("Mixed vegetable sabzi","Dals & curries",95,2.5,10,5,3,"1 katori",150),
+  F("Chicken biryani","Rice dishes",190,8,22,7,1.2,"1 plate",300),
+  F("Vegetable biryani","Rice dishes",160,3.5,25,5.5,2,"1 plate",300),
+  F("White rice, cooked","Rice dishes",130,2.7,28,0.3,0.4,"1 cup",158),
+  F("Brown rice, cooked","Rice dishes",123,2.7,26,1.0,1.6,"1 cup",158),
+  F("Poha","Rice dishes",130,2.6,22,3.6,1.2,"1 bowl",180),
+  // — Snacks & sweets —
+  F("Samosa","Snacks",308,5,32,17,3,"1 samosa",60),
+  F("Dhokla","Snacks",160,6,23,4,2,"2 pieces",80),
+  F("Pav bhaji (bhaji only)","Snacks",130,3,14,7,3,"1 bowl",200),
+  F("Vegetable momos","Snacks",190,7,28,5,1.5,"1 piece",25),
+  F("Potato chips","Snacks",536,7,53,35,4.8,"small pack",30),
+  F("Marie biscuit","Snacks",440,7,76,12,2,"1 biscuit",5),
+  F("Gulab jamun","Sweets",280,4,42,11,0.5,"1 piece",40),
+  F("Jalebi","Sweets",350,1,60,12,0.5,"1 piece",25),
+  F("Kheer","Sweets",130,3.5,20,4,0.3,"1 katori",150),
+  F("Carrot halwa","Sweets",190,3,25,9,1.5,"1 katori",100),
+  F("Dark chocolate","Sweets",546,4.9,61,31,7,"1 square",10),
+  F("Ice cream","Sweets",207,3.5,24,11,0.7,"1 scoop",65),
+  // — Fast food —
+  F("Cheese pizza","Fast food",266,11,33,10,2.3,"1 slice",107),
+  F("Chicken burger","Fast food",295,17,24,14,1.4,"1 burger",180),
+  F("French fries","Fast food",312,3.4,41,15,3.8,"medium",115),
+  F("Fried chicken","Fast food",246,19,8,15,0.5,"1 piece",90),
+  F("Chicken shawarma roll","Fast food",215,14,20,9,1.5,"1 roll",220),
+  F("Veg sandwich","Fast food",230,7,30,9,2.5,"1 sandwich",150),
+  F("Instant noodles, cooked","Fast food",150,3.5,20,6,1,"1 pack",180),
+  // — Meat, fish, eggs —
+  F("Chicken breast, cooked","Meat & fish",165,31,0,3.6,0,"1 fillet",120),
+  F("Chicken thigh, cooked","Meat & fish",209,26,0,10.9,0,"1 thigh",90),
+  F("Mutton, cooked","Meat & fish",143,27,0,3,0,"1 serving",100),
+  F("Beef mince, cooked","Meat & fish",250,26,0,15,0,"1 serving",100),
+  F("Pork chop, cooked","Meat & fish",242,27,0,14,0,"1 chop",120),
+  F("Salmon","Meat & fish",208,20,0,13,0,"1 fillet",125),
+  F("Rohu fish","Meat & fish",97,17,0,3,0,"1 piece",100),
+  F("Tuna, canned in water","Meat & fish",116,26,0,0.8,0,"1 tin",95),
+  F("Prawns, cooked","Meat & fish",99,24,0.2,0.3,0,"1 serving",100),
+  F("Whole egg","Eggs & dairy",143,12.6,0.7,9.5,0,"1 egg",50),
+  F("Egg white","Eggs & dairy",52,10.9,0.7,0.2,0,"1 white",33),
+  F("Omelette, two eggs","Eggs & dairy",180,12,1.5,14,0,"1 omelette",120),
+  // — Dairy —
+  F("Full-fat milk","Eggs & dairy",61,3.2,4.8,3.3,0,"1 cup",240),
+  F("Toned milk","Eggs & dairy",50,3.2,4.7,1.5,0,"1 cup",240),
+  F("Curd / plain yogurt","Eggs & dairy",61,3.5,4.7,3.3,0,"1 katori",150),
+  F("Greek yogurt","Eggs & dairy",59,10,3.6,0.4,0,"1 cup",170),
+  F("Buttermilk","Eggs & dairy",40,3.3,4.8,0.9,0,"1 glass",200),
+  F("Paneer","Eggs & dairy",265,18,1.2,20,0,"1 slab",50),
+  F("Cheddar cheese","Eggs & dairy",403,25,1.3,33,0,"1 slice",20),
+  F("Cottage cheese","Eggs & dairy",98,11,3.4,4.3,0,"1 cup",226),
+  F("Butter","Fats & oils",717,0.9,0.1,81,0,"1 tsp",5),
+  F("Ghee","Fats & oils",900,0,0,100,0,"1 tsp",5),
+  F("Coconut oil","Fats & oils",862,0,0,100,0,"1 tsp",5),
+  F("Olive oil","Fats & oils",884,0,0,100,0,"1 tbsp",14),
+  F("Grated coconut","Fats & oils",354,3.3,15,33,9,"2 tbsp",20),
+  // — Grains & cereals —
+  F("Rolled oats, dry","Grains",389,17,66,7,11,"1/2 cup",40),
+  F("Cooked oatmeal","Grains",71,2.5,12,1.5,1.7,"1 bowl",240),
+  F("Whole wheat bread","Grains",247,13,41,3.4,7,"1 slice",28),
+  F("White bread","Grains",265,9,49,3.2,2.7,"1 slice",28),
+  F("Pasta, cooked","Grains",158,5.8,31,0.9,1.8,"1 cup",140),
+  F("Quinoa, cooked","Grains",120,4.4,21,1.9,2.8,"1 cup",185),
+  F("Cornflakes","Grains",357,7,84,0.4,3,"1 bowl",40),
+  F("Ragi / finger millet flour","Grains",328,7.3,72,1.3,11,"1 serving",50),
+  // — Pulses, nuts, seeds —
+  F("Soya chunks, dry","Nuts & seeds",345,52,33,0.5,13,"1 cup",50),
+  F("Tofu","Nuts & seeds",76,8,1.9,4.8,0.3,"1 block",100),
+  F("Sprouted moong","Nuts & seeds",106,8,19,0.4,7,"1 katori",100),
+  F("Roasted chana","Nuts & seeds",364,20,61,6,17,"1 handful",30),
+  F("Peanuts","Nuts & seeds",567,26,16,49,8.5,"1 handful",30),
+  F("Almonds","Nuts & seeds",579,21,22,50,12.5,"10 almonds",12),
+  F("Cashews","Nuts & seeds",553,18,30,44,3.3,"10 cashews",16),
+  F("Walnuts","Nuts & seeds",654,15,14,65,6.7,"4 halves",16),
+  F("Peanut butter","Nuts & seeds",588,25,20,50,6,"1 tbsp",16),
+  F("Chia seeds","Nuts & seeds",486,17,42,31,34,"1 tbsp",12),
+  F("Flax seeds","Nuts & seeds",534,18,29,42,27,"1 tbsp",10),
+  F("Whey protein powder","Nuts & seeds",400,80,8,6,1,"1 scoop",30),
+  // — Vegetables —
+  F("Spinach / palak","Vegetables",23,2.9,3.6,0.4,2.2,"1 cup",30),
+  F("Broccoli","Vegetables",34,2.8,7,0.4,2.6,"1 cup",91),
+  F("Carrot","Vegetables",41,0.9,10,0.2,2.8,"1 medium",61),
+  F("Tomato","Vegetables",18,0.9,3.9,0.2,1.2,"1 medium",123),
+  F("Onion","Vegetables",40,1.1,9,0.1,1.7,"1 medium",110),
+  F("Boiled potato","Vegetables",87,2,20,0.1,1.8,"1 medium",150),
+  F("Sweet potato","Vegetables",86,1.6,20,0.1,3,"1 medium",130),
+  F("Cauliflower","Vegetables",25,1.9,5,0.3,2,"1 cup",100),
+  F("Okra / bhindi","Vegetables",33,1.9,7,0.2,3.2,"1 cup",100),
+  F("Brinjal","Vegetables",25,1,6,0.2,3,"1 cup",100),
+  F("Cucumber","Vegetables",15,0.7,3.6,0.1,0.5,"1 medium",200),
+  F("Cabbage","Vegetables",25,1.3,6,0.1,2.5,"1 cup",89),
+  F("Beetroot","Vegetables",43,1.6,10,0.2,2.8,"1 medium",82),
+  F("Bottle gourd","Vegetables",14,0.6,3.4,0.1,0.5,"1 cup",116),
+  F("Drumstick","Vegetables",37,2.1,8.5,0.2,3.2,"1 pod",50),
+  F("Green peas","Vegetables",81,5.4,14,0.4,5.7,"1 cup",145),
+  F("Mushroom","Vegetables",22,3.1,3.3,0.3,1,"1 cup",70),
+  F("Capsicum","Vegetables",31,1,6,0.3,2.1,"1 medium",119),
+  // — Fruit —
+  F("Banana","Fruit",89,1.1,23,0.3,2.6,"1 medium",118),
+  F("Apple","Fruit",52,0.3,14,0.2,2.4,"1 medium",182),
+  F("Mango","Fruit",60,0.8,15,0.4,1.6,"1 cup",165),
+  F("Papaya","Fruit",43,0.5,11,0.3,1.7,"1 cup",145),
+  F("Guava","Fruit",68,2.6,14,1,5.4,"1 fruit",55),
+  F("Orange","Fruit",47,0.9,12,0.1,2.4,"1 medium",131),
+  F("Grapes","Fruit",69,0.7,18,0.2,0.9,"1 cup",92),
+  F("Watermelon","Fruit",30,0.6,8,0.2,0.4,"1 cup",152),
+  F("Pomegranate","Fruit",83,1.7,19,1.2,4,"1 cup",174),
+  F("Avocado","Fruit",160,2,9,15,7,"half fruit",68),
+  F("Dates","Fruit",277,1.8,75,0.2,6.7,"2 dates",24),
+  F("Sapota / chikoo","Fruit",83,0.4,20,1.1,5.3,"1 fruit",80),
+  // — Drinks & sugars —
+  F("Masala chai with sugar","Drinks",55,1.6,8,1.8,0,"1 cup",150),
+  F("Tender coconut water","Drinks",19,0.7,3.7,0.2,1.1,"1 coconut",300),
+  F("Cola","Drinks",42,0,10.6,0,0,"1 can",330),
+  F("Orange juice","Drinks",45,0.7,10.4,0.2,0.2,"1 glass",240),
+  F("Beer","Drinks",43,0.5,3.6,0,0,"1 bottle",330),
+  F("Sugar","Drinks",387,0,100,0,0,"1 tsp",4),
+  F("Honey","Drinks",304,0.3,82,0,0.2,"1 tsp",7),
+];
+const CATS = [...new Set(FOODS.map(f=>f.cat))];
+const MEALS = ["Breakfast","Lunch","Snack","Dinner"];
+
+/* ============================================================
+   2. STORAGE  (per-viewer convenience; always guarded)
+   ============================================================ */
+const LS_LOG="thali.log.v2", LS_GOALS="thali.goals.v2";
+const DEFAULT_GOALS={kcal:2000,p:110,c:240,f:65,fib:30};
+function load(key,fallback){
+  try{const raw=localStorage.getItem(key);return raw?JSON.parse(raw):fallback;}
+  catch(e){return fallback;}
+}
+function save(key,val){
+  try{localStorage.setItem(key,JSON.stringify(val));}catch(e){/* private mode: keep going */}
+}
+let LOG = load(LS_LOG,{});          // { "2026-09-19": [entry, …] }
+let GOALS = Object.assign({},DEFAULT_GOALS,load(LS_GOALS,{}));
+let day = todayKey();
+
+function todayKey(d){const x=d||new Date();return x.toISOString().slice(0,10);}
+function shiftDay(key,n){const d=new Date(key+"T12:00:00");d.setDate(d.getDate()+n);return todayKey(d);}
+function prettyDay(key){
+  if(key===todayKey())return "Today";
+  if(key===shiftDay(todayKey(),-1))return "Yesterday";
+  return new Date(key+"T12:00:00").toLocaleDateString(undefined,{weekday:"short",day:"numeric",month:"short"});
+}
+const entries = k => LOG[k] || [];
+const round = (n,d=0)=>{const m=Math.pow(10,d);return Math.round(n*m)/m;};
+
+/* ============================================================
+   3. TOTALS + RENDER
+   ============================================================ */
+function totals(list){
+  return list.reduce((t,e)=>({
+    kcal:t.kcal+e.kcal, p:t.p+e.p, c:t.c+e.c, f:t.f+e.f, fib:t.fib+e.fib
+  }),{kcal:0,p:0,c:0,f:0,fib:0});
+}
+function renderHero(){
+  const t=totals(entries(day));
+  document.getElementById("kcalNow").textContent=round(t.kcal);
+  document.getElementById("kcalGoal").textContent=GOALS.kcal;
+  const left=GOALS.kcal-t.kcal;
+  document.getElementById("kcalLeft").textContent =
+    left>=0 ? round(left)+" left" : round(-left)+" over";
+  const pc=t.p*4, cc=t.c*4, fc=t.f*9, sum=pc+cc+fc || 1;
+  const spans=document.getElementById("plateline").children;
+  spans[0].style.width=(pc/sum*100)+"%";
+  spans[1].style.width=(cc/sum*100)+"%";
+  spans[2].style.width=(fc/sum*100)+"%";
+  const set=(v,b,val,goal,unit="g")=>{
+    document.getElementById(v).innerHTML=round(val)+"<small> "+unit+" of "+goal+"</small>";
+    document.getElementById(b).style.width=Math.min(100,val/goal*100)+"%";
+  };
+  set("vPro","bPro",t.p,GOALS.p); set("vCarb","bCarb",t.c,GOALS.c);
+  set("vFat","bFat",t.f,GOALS.f); set("vFib","bFib",t.fib,GOALS.fib);
+}
+function renderLog(){
+  const box=document.getElementById("log"); box.innerHTML="";
+  const list=entries(day);
+  document.getElementById("logSub").textContent = list.length
+    ? list.length+" item"+(list.length>1?"s":"")+" logged."
+    : "Nothing logged yet. Search a food above to start the day.";
+  MEALS.forEach(m=>{
+    const items=list.filter(e=>e.meal===m);
+    if(!items.length)return;
+    const t=totals(items);
+    const sec=document.createElement("div"); sec.className="meal";
+    const h=document.createElement("h3");
+    h.innerHTML="<span>"+m+"</span><span>"+round(t.kcal)+" kcal</span>";
+    sec.appendChild(h);
+    items.forEach(e=>{
+      const row=document.createElement("div"); row.className="entry";
+      const n=document.createElement("div"); n.className="en";
+      n.innerHTML="<b></b><span></span>";
+      n.querySelector("b").textContent=e.name;
+      n.querySelector("span").textContent =
+        round(e.grams)+" g · P "+round(e.p,1)+" · C "+round(e.c,1)+" · F "+round(e.f,1)+" · Fib "+round(e.fib,1);
+      const k=document.createElement("div"); k.className="ek"; k.textContent=round(e.kcal);
+      const x=document.createElement("button"); x.className="x"; x.textContent="×";
+      x.setAttribute("aria-label","Remove "+e.name);
+      x.onclick=()=>{LOG[day]=entries(day).filter(z=>z.id!==e.id);save(LS_LOG,LOG);renderAll();};
+      row.append(n,k,x); sec.appendChild(row);
+    });
+    box.appendChild(sec);
+  });
+}
+function renderWeek(){
+  const box=document.getElementById("week"); box.innerHTML="";
+  const days=[]; for(let i=6;i>=0;i--)days.push(shiftDay(day,-i));
+  const vals=days.map(d=>totals(entries(d)).kcal);
+  const max=Math.max(GOALS.kcal,...vals,1);
+  days.forEach((d,i)=>{
+    const cell=document.createElement("div");
+    const bar=document.createElement("i");
+    bar.style.height=(vals[i]/max*100)+"%";
+    if(vals[i]>GOALS.kcal)bar.style.background="var(--fat)";
+    const lab=document.createElement("em");
+    lab.textContent=new Date(d+"T12:00:00").toLocaleDateString(undefined,{weekday:"narrow"});
+    cell.title=prettyDay(d)+": "+round(vals[i])+" kcal";
+    cell.append(bar,lab); box.appendChild(cell);
+  });
+}
+function renderAll(){
+  document.getElementById("dayLabel").textContent=prettyDay(day);
+  renderHero(); renderLog(); renderWeek();
+}
+
+/* ============================================================
+   4. SEARCH
+   ============================================================ */
+let activeCat=null;
+const chipBox=document.getElementById("catChips");
+CATS.forEach(c=>{
+  const b=document.createElement("button"); b.className="chip"; b.textContent=c;
+  b.setAttribute("aria-pressed","false");
+  b.onclick=()=>{activeCat = activeCat===c?null:c; [...chipBox.children].forEach(x=>
+    x.setAttribute("aria-pressed", x.textContent===activeCat ? "true":"false")); doSearch();};
+  chipBox.appendChild(b);
+});
+function score(food,q){
+  const n=food.name.toLowerCase();
+  if(!q) return 0.5;
+  if(n===q) return 100;
+  if(n.startsWith(q)) return 80;
+  if(n.includes(q)) return 60;
+  const words=n.split(/[\s\/&,]+/);
+  if(words.some(w=>w.startsWith(q))) return 55;
+  if(food.cat.toLowerCase().includes(q)) return 20;
+  return 0;
+}
+function doSearch(){
+  const q=document.getElementById("q").value.trim().toLowerCase();
+  const ul=document.getElementById("results"); ul.innerHTML="";
+  let list=FOODS.filter(f=>!activeCat||f.cat===activeCat)
+    .map(f=>({f,s:score(f,q)})).filter(x=>x.s>0)
+    .sort((a,b)=>b.s-a.s||a.f.name.localeCompare(b.f.name))
+    .slice(0,q?25:14).map(x=>x.f);
+  if(!list.length){
+    ul.innerHTML='<li class="empty">No match. Try a simpler word — "dosa" rather than "ghee roast dosa" — or photograph the plate instead.</li>';
+    return;
+  }
+  list.forEach(f=>{
+    const li=document.createElement("li"); li.tabIndex=0;
+    const per=Math.round(f.kcal*f.pg/100);
+    li.innerHTML='<div class="nm"><b></b><span></span></div><div class="kc"></div>';
+    li.querySelector("b").textContent=f.name;
+    li.querySelector(".nm span").textContent=f.portion+" ("+f.pg+" g) · "+f.cat;
+    li.querySelector(".kc").innerHTML=per+' <small>kcal</small>';
+    li.onclick=()=>openSheet(f);
+    li.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openSheet(f);}};
+    ul.appendChild(li);
+  });
+}
+document.getElementById("q").addEventListener("input",doSearch);
+
+/* ============================================================
+   5. PORTION SHEET
+   ============================================================ */
+let sheetFood=null, sheetMeal=guessMeal();
+function guessMeal(){
+  const h=new Date().getHours();
+  if(h<11)return "Breakfast"; if(h<15)return "Lunch"; if(h<18)return "Snack"; return "Dinner";
+}
+const mealBox=document.getElementById("mealChips");
+MEALS.forEach(m=>{
+  const b=document.createElement("button"); b.className="chip"; b.textContent=m;
+  b.onclick=()=>{sheetMeal=m;paintMealChips();};
+  mealBox.appendChild(b);
+});
+function paintMealChips(){
+  [...mealBox.children].forEach(b=>b.setAttribute("aria-pressed", b.textContent===sheetMeal?"true":"false"));
+}
+function openSheet(food){
+  sheetFood=food; sheetMeal=guessMeal(); paintMealChips();
+  document.getElementById("sheetName").textContent=food.name;
+  document.getElementById("sheetCat").textContent=
+    food.cat+" · "+food.kcal+" kcal per 100 g";
+  const unit=document.getElementById("unit");
+  unit.innerHTML="";
+  [[food.portion+" ("+food.pg+" g)",food.pg],["grams",1],["100 g",100]].forEach(([l,g])=>{
+    const o=document.createElement("option"); o.value=g; o.textContent=l; unit.appendChild(o);
+  });
+  document.getElementById("qty").value=1;
+  paintPreview();
+  document.getElementById("scrim").setAttribute("open","");
+  document.getElementById("qty").focus();
+}
+function sheetGrams(){
+  const q=parseFloat(document.getElementById("qty").value)||0;
+  return q*parseFloat(document.getElementById("unit").value);
+}
+function paintPreview(){
+  if(!sheetFood)return;
+  const g=sheetGrams(), k=g/100;
+  document.getElementById("pKcal").textContent=round(sheetFood.kcal*k);
+  document.getElementById("pPro").textContent=round(sheetFood.p*k,1)+" g";
+  document.getElementById("pCarb").textContent=round(sheetFood.c*k,1)+" g";
+  document.getElementById("pFat").textContent=round(sheetFood.f*k,1)+" g";
+  document.getElementById("pFib").textContent=round(sheetFood.fib*k,1)+" g";
+}
+document.getElementById("qty").addEventListener("input",paintPreview);
+document.getElementById("unit").addEventListener("change",()=>{
+  if(document.getElementById("unit").value==="1")document.getElementById("qty").value=100;
+  paintPreview();
+});
+function closeSheet(){document.getElementById("scrim").removeAttribute("open");sheetFood=null;}
+document.getElementById("cancelBtn").onclick=closeSheet;
+document.getElementById("scrim").addEventListener("click",e=>{if(e.target.id==="scrim")closeSheet();});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet();});
+document.getElementById("addBtn").onclick=()=>{
+  if(!sheetFood)return;
+  const g=sheetGrams(), k=g/100;
+  addEntry({
+    name:sheetFood.name, grams:g, meal:sheetMeal,
+    kcal:sheetFood.kcal*k, p:sheetFood.p*k, c:sheetFood.c*k, f:sheetFood.f*k, fib:sheetFood.fib*k
+  });
+  closeSheet();
+};
+function addEntry(e){
+  e.id=Math.random().toString(36).slice(2);
+  LOG[day]=entries(day).concat(e);
+  save(LS_LOG,LOG); renderAll();
+}
+
+/* ============================================================
+   6. DATE NAV + GOALS
+   ============================================================ */
+document.getElementById("prevDay").onclick=()=>{day=shiftDay(day,-1);renderAll();};
+document.getElementById("nextDay").onclick=()=>{
+  if(day>=todayKey())return; day=shiftDay(day,1); renderAll();
+};
+function fillGoals(){
+  gKcal.value=GOALS.kcal; gPro.value=GOALS.p; gCarb.value=GOALS.c;
+  gFat.value=GOALS.f; gFib.value=GOALS.fib;
+}
+document.getElementById("saveGoals").onclick=()=>{
+  GOALS={kcal:+gKcal.value||2000,p:+gPro.value||110,c:+gCarb.value||240,
+         f:+gFat.value||65,fib:+gFib.value||30};
+  save(LS_GOALS,GOALS); renderAll();
+  document.getElementById("goalStatus").textContent="Targets saved.";
+  setTimeout(()=>document.getElementById("goalStatus").textContent="",2500);
+};
+document.getElementById("clearDay").onclick=()=>{
+  delete LOG[day]; save(LS_LOG,LOG); renderAll();
+};
+
+/* ---------- start ---------- */
+fillGoals(); doSearch(); renderAll();
+</script>
+</body>
+</html>
